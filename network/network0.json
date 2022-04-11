@@ -1,0 +1,11 @@
+[
+  {
+    "duration": 120,
+    "serverIngress": 0,
+    "serverEgress": 0,
+    "serverLatency": 0,
+    "clientIngress": 0,
+    "clientEgress": 0,
+    "clientLatency": 0
+  }
+]
