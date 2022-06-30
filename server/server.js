@@ -176,7 +176,7 @@ const getParams = () => {
     '-i', 'testsrc2=size=1280x720:rate=25,' +
     'drawbox=x=0:y=0:w=700:h=50:c=black@.6:t=fill,' +
     'drawtext=x=5:y=5:fontfile=FreeSans.ttf:fontsize=54:fontcolor=white:text=\'CAdViSE\',' +
-    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0] + '.00\':rate=25:tc24hmax=1,' +
+    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0].replace(/:/g, '\\:') + '\\:00\':rate=25:tc24hmax=1,' +
     'setparams=field_mode=prog:range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709,' +
     'format=yuv420p',
     '-re', '-f', 'lavfi',
@@ -229,6 +229,8 @@ const getParams = () => {
     'http://localhost:' + ingestPort + '/live/manifest.mpd'
   ]
 }
+
+console.log(getParams())
 
 const child = childProcess.spawn(pathToFfmpeg, getParams(), {
   stdio: 'pipe'
