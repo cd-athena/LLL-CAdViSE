@@ -4,7 +4,7 @@ config=$(cat /home/ec2-user/config.json)
 duration=$(($(echo "$config" | jq -r '.experimentDuration')))
 player=$(echo "$config" | jq -r '.player')
 
-sudo docker exec -d "lll-cadvise-client" python3 /home/seluser/cadvise/runPlayer.py "http://localhost/player/$player" "$duration"
+sudo docker exec -d "lll-cadvise-client" python3 /home/seluser/cadvise/runPlayer.py "http://localhost/player/$player/index.html" "$duration"
 
 durations=($(echo "$config" | jq -r '.shapes[].duration'))
 ingresses=($(echo "$config" | jq -r '.shapes[].clientIngress'))

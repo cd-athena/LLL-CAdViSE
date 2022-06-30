@@ -24,13 +24,19 @@ app.get('/:title/:fileName', async (request, response) => {
     return response.send('Failed to record the log: ' + JSON.stringify(error))
   }
 
-  axios({
+  const axiosParams = {
     method: 'get',
-    url: BASEURL + title + '/' + fileName,
-    responseType: 'stream'
-  }).then((serverResponse) => {
+    url: BASEURL + title + '/' + fileName
+  }
+
+  if (!fileName.includes('mpd')) {
+    axiosParams.responseType = 'stream'
+  }
+
+  axios(axiosParams).then((serverResponse) => {
     if (fileName.includes('mpd')) {
-      serverResponse.data.replace(/.m4s/g, '.m4s?playerABR=' + playerABR).pipe(response)
+      const manifest = serverResponse.data.toString().replace(/.m4s/g, '.m4s?playerABR=' + playerABR)
+      response.send(manifest)
     } else {
       serverResponse.data.pipe(response)
     }
