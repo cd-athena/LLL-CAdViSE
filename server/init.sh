@@ -1,14 +1,13 @@
 #!/bin/bash
 
-sudo yum -y install docker jq git &>/dev/null
+mkdir -p /home/ec2-user/dataset/live/
 
-sudo service docker start
-sudo git clone https://github.com/cd-athena/wondershaper.git /home/ec2-user/wondershaper
+curl --silent --location https://rpm.nodesource.com/setup_16.x | sudo bash -
+sudo yum -y install nodejs jq git &>/dev/null
 
-config=$(cat /home/ec2-user/config.json)
-title=$(echo "$config" | jq -r '.title')
+git clone https://github.com/cd-athena/wondershaper.git /home/ec2-user/wondershaper
 
-sudo docker pull "babakt/ppt-server-$title:latest" &>/dev/null
-sudo docker run --rm -d --name ppt-server -p 80:80 -v /dev/shm:/dev/shm "babakt/ppt-server-$title"
+cd /home/ec2-user/ || exit 1
+sudo npm i && sudo npm i -g pm2
 
 exit 0

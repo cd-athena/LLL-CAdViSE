@@ -7,6 +7,9 @@ ingresses=($(echo "$config" | jq -r '.shapes[].serverIngress'))
 egresses=($(echo "$config" | jq -r '.shapes[].serverEgress'))
 latencies=($(echo "$config" | jq -r '.shapes[].serverLatency'))
 
+cd /home/ec2-user/ || exit 1
+sudo pm2 start server.js
+
 shaperIndex=0
 while [ $shaperIndex -lt "${#durations[@]}" ]; do
 

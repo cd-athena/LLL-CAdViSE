@@ -1,18 +1,20 @@
 {
-  "name": "ppt-server",
+  "name": "lll-cadvise-server",
   "version": "1.0.0",
-  "description": "Serves the dataset",
-  "main": "index.js",
+  "description": "Serves the live stream",
+  "main": "server.js",
   "scripts": {
     "test": "standard && exit 0"
   },
-  "author": "Babak T (babak@itec.aau.at)",
-  "license": "ISC",
-  "repository": "https://github.com/cd-athena/CAdViSE",
+  "author": "Babak T (babak.taraghi@aau.at)",
+  "license": "Refer to GitHub repository",
+  "repository": "https://github.com/cd-athena/LLL-CAdViSE",
   "dependencies": {
-    "express": "^4.17.1"
+    "ffmpeg-static": "^5.0.0",
+    "fs-extra": "^10.1.0",
+    "bl": "^5.0.0"
   },
   "devDependencies": {
-    "standard": "^16.0.3"
+    "standard": "^17.0.0"
   }
 }
