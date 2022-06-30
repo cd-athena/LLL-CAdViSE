@@ -8,13 +8,13 @@ const http = require('http')
 const ingestPort = 8080
 const deliveryPort = 80
 const cacheMap = new Map()
-const diskCache = './dataset'
-const diskCacheTimeout = 20 // seconds
+const diskCachePath = './dataset'
+const diskCacheTimeout = 30 // seconds
 
 class Cache extends EventEmitter {
   constructor () {
     super()
-    this.bufferList = new BufferList
+    this.bufferList = new BufferList()
     this.responses = []
     this.ended = false
   }
@@ -87,7 +87,7 @@ function send500 (res) {
 
 const ingestServer = http.createServer((request, response) => {
   if (request.method === 'POST') {
-    const filename = diskCache + request.url
+    const filename = diskCachePath + request.url
 
     console.log(`POST ${request.url}`)
 
@@ -111,12 +111,14 @@ const ingestServer = http.createServer((request, response) => {
     })
 
     request.on('data', (chunk) => {
+      if (!cacheMap.has(filename)) return
       cacheMap.get(filename).bufferList.append(chunk)
       cacheMap.get(filename).emit('data', chunk)
       writeStream.write(chunk)
     })
 
     request.on('end', () => {
+      if (!cacheMap.has(filename)) return
       cacheMap.get(filename).emit('end')
       writeStream.end()
 
@@ -133,22 +135,16 @@ const deliveryServer = http.createServer((request, response) => {
   if (request.method === 'GET') {
     const suffixIdx = request.url.lastIndexOf('.')
     let suffix = request.url.slice(suffixIdx, request.url.length)
-    let filename = diskCache + request.url
+    let filename = diskCachePath + request.url
 
     if (suffix.includes('?')) {
       suffix = suffix.slice(0, suffix.indexOf('?'))
-      filename = diskCache + request.url.slice(0, request.url.indexOf('?'))
+      filename = diskCachePath + request.url.slice(0, request.url.indexOf('?'))
     }
 
     console.log(`GET ${request.url}`)
 
     switch (suffix) {
-      case '.html':
-        sendChunked(response, 'text/html', filename)
-        break
-      case '.js':
-        sendChunked(response, 'application/javascript', filename)
-        break
       case '.mpd':
         send(response, 'application/dash+xml', filename)
         break
