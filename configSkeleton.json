@@ -1,8 +1,6 @@
 {
   "id": "--id--",
-  "title": "--title--",
   "player": "--player--",
-  "alk": "--alk--",
   "serverIp": "--serverIp--",
   "experimentDuration": "--experimentDuration--",
   "shapes": "--shapes--"

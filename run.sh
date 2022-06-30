@@ -2,15 +2,8 @@
 
 ########################### configurations ###########################
 # some of these would be overwritten by arguments passed to the command
-players=("bitmovin" "dashjs" "dashjs4" "shaka" "bola" "bba0" "elastic" "fastmpc" "quetra" "pensive" "rdos")
+players=("dashjs")
 experiments=1
-shaperDurations=(15)   #s
-serverIngresses=(5000) #Kbps
-serverEgresses=(5000)  #Kbps
-serverLatencies=(80)   #ms
-clientIngresses=(5000) #Kbps
-clientEgresses=(5000)  #Kbps
-clientLatencies=(80)   #ms
 id=$(date '+%s')
 awsProfile="default"
 placementGroup="pptCluster"
@@ -20,13 +13,7 @@ awsSecurityGroup="ppt-security-group"
 serverInstanceId=""
 clientInstanceIds=""
 networkConfig=""
-analyticsLicenseKey=""
-bitmovinAPIKey=""
-analyticsOutputId=""
-startTime=""
-endTime=""
-instancesType="m5ad.large"
-title="bbb1"
+instancesType="m5ad.xlarge"
 clientWarmupTime=1 #s
 ########################### /configurations ##########################
 
@@ -78,10 +65,6 @@ for argument in "$@"; do
       nextArgumentIndex=$((argumentIndex + 2))
       placementGroup="${!nextArgumentIndex}"
       ;;
-    "--title")
-      nextArgumentIndex=$((argumentIndex + 2))
-      title="${!nextArgumentIndex}"
-      ;;
     "--awsProfile")
       nextArgumentIndex=$((argumentIndex + 2))
       awsProfile="${!nextArgumentIndex}"
@@ -106,8 +89,13 @@ for argument in "$@"; do
           if [[ $value == *"--"* ]]; then
             break
           fi
-          if [[ " ${players[@]} " =~ " ${value} " ]]; then
-            newPlayers+=($value)
+          playerQuantity="$(cut -d 'x' -f 1 <<<"$value")"
+          playerName="$(cut -d 'x' -f 2- <<<"$value")"
+          if [[ " ${players[@]} " =~ " ${playerName} " ]]; then
+            until [ $playerQuantity -lt 1 ]; do
+              newPlayers+=($playerName)
+              let playerQuantity-=1
+            done
           else
             showError "Invalid player '$value'"
           fi
@@ -136,10 +124,6 @@ for duration in "${shaperDurations[@]}"; do
   durationOfExperiment=$(echo "$durationOfExperiment + $duration" | bc -l)
 done
 
-if [[ $durationOfExperiment -gt 596 ]]; then
-  showError "Maximum duration of each experiment can not be more than test asset length (09:56)"
-fi
-
 showMessage "Running $experiments experiment(s) on the following players for ${durationOfExperiment}s each"
 printf '%s ' "${players[@]}"
 printf "\n"
@@ -152,7 +136,7 @@ aws ec2 run-instances \
   --placement "GroupName = $placementGroup" \
   --iam-instance-profile Name=$awsIAMRole \
   --security-groups $awsSecurityGroup \
-  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=ppt-server-$id}]" \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=lll-cadvise-server-$id}]" \
   --profile $awsProfile >"$id/instance.json" || showError "Failed to run the aws command. Check your aws credentials."
 
 serverInstanceId=$(jq -r '.Instances[].InstanceId' <"$id/instance.json")
@@ -168,7 +152,7 @@ aws ec2 run-instances \
   --placement "GroupName = $placementGroup" \
   --iam-instance-profile Name=$awsIAMRole \
   --security-groups $awsSecurityGroup \
-  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=ppt-client-$id}]" \
+  --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=lll-cadvise-client-$id}]" \
   --profile $awsProfile >"$id/instances.json" || showError "Failed to run the aws command. Check your aws credentials."
 
 clientInstanceIds=$(jq -r '.Instances[].InstanceId' <"$id/instances.json")
@@ -194,8 +178,6 @@ configSkeleton=$(cat configSkeleton.json)
 
 ((durationOfExperiment += clientWarmupTime)) # warm up client
 config="${configSkeleton/--id--/$id}"
-config="${config/--title--/$title}"
-config="${config/--alk--/$analyticsLicenseKey}"
 config="${config/--serverIp--/$serverPrivateIp}"
 config="${config/--experimentDuration--/$durationOfExperiment}"
 
@@ -253,11 +235,11 @@ while ! nc -w5 -z "$serverPublicIp" 22; do
 done
 
 showMessage "Injecting scripts and configurations into server instance"
-scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
+scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh server/server.js server/package.json server/FreeSans.ttf server/.nvmrc "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
 
 showMessage "Executing initializer script(s)"
 SSMCommandId=$(aws ssm send-command \
-  --targets "Key=tag:Name,Values=ppt-server-$id,ppt-client-$id" \
+  --targets "Key=tag:Name,Values=lll-cadvise-server-$id,lll-cadvise-client-$id" \
   --document-name "AWS-RunShellScript" \
   --comment "Initialize" \
   --parameters commands="/home/ec2-user/init.sh" \
@@ -295,7 +277,7 @@ while [ $currentExperiment -lt $experiments ]; do
 
   showMessage "Running experiment $currentExperiment of $experiments [+$clientWarmupTime(s) Client warmup time]"
   SSMCommandId=$(aws ssm send-command \
-    --targets "Key=tag:Name,Values=ppt-server-$id,ppt-client-$id" \
+    --targets "Key=tag:Name,Values=lll-cadvise-server-$id,lll-cadvise-client-$id" \
     --document-name "AWS-RunShellScript" \
     --comment "Start" \
     --parameters commands="/home/ec2-user/start.sh" \
@@ -327,32 +309,5 @@ while [ $currentExperiment -lt $experiments ]; do
     showError "Failed to run experiment(s). Check the S3 bucket for details"
   fi
 done
-
-#ppt-analytics-ext-id
-#endTime=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-
-#showMessage "Requesting the analytics data"
-#requestResult=$(curl -s -X POST https://api.bitmovin.com/v1/analytics/exports/ \
-#  -H 'Content-Type: application/json' \
-#  -H 'X-Api-Key: '$bitmovinAPIKey \
-#  -d '{
-#        "startTime": "'$startTime'",
-#        "endTime": "'$endTime'",
-#        "name": "ppt-analytics-request-'$id'",
-#        "licenseKey": "'$analyticsLicenseKey'",
-#        "output": {
-#          "outputPath": "analytics/'$id'/",
-#          "outputId": "'$analyticsOutputId'"
-#        }
-#      }')
-#requestStatus=$(echo "$requestResult" | jq -r '.status')
-#taskId=$(echo "$requestResult" | jq -r '.data.result.id')
-#taskStatus=$(echo "$requestResult" | jq -r '.data.result.status')
-#if [ $taskStatus == 'ERROR' ] || [ $requestStatus == 'ERROR' ]; then
-#  showError 'Failed to request the analytics data'
-#  echo $requestResult
-#else
-#  echo $taskId
-#fi
 
 cleanExit 0

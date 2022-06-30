@@ -1,6 +1,6 @@
 [
   {
-    "duration": 120,
+    "duration": 240,
     "serverIngress": 0,
     "serverEgress": 0,
     "serverLatency": 0,
