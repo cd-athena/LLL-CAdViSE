@@ -8,13 +8,13 @@ const http = require('http')
 const ingestPort = 8080
 const deliveryPort = 80
 const cacheMap = new Map()
-const diskCache = './dataset'
-const diskCacheTimeout = 20 // seconds
+const diskCachePath = './dataset'
+const diskCacheTimeout = 30 // seconds || 0 for no clean-ups
 
 class Cache extends EventEmitter {
   constructor () {
     super()
-    this.bufferList = new BufferList
+    this.bufferList = new BufferList()
     this.responses = []
     this.ended = false
   }
@@ -73,24 +73,22 @@ const sendChunkedCached = (response, contentType, filename) => {
   }
 }
 
-function send404 (res) {
-  res.statusCode = 404
-  res.statusMessage = 'Not found'
-  res.end()
+const send404 = response => {
+  response.statusCode = 404
+  response.statusMessage = 'Not found'
+  response.end()
 }
 
-function send500 (res) {
-  res.statusCode = 500
-  res.statusMessage = 'Internal error'
-  res.end()
+const send500 = response => {
+  response.statusCode = 500
+  response.statusMessage = 'Internal error'
+  response.end()
 }
 
 const ingestServer = http.createServer((request, response) => {
-  if (request.method === 'POST') {
-    const filename = diskCache + request.url
-
-    console.log(`POST ${request.url}`)
-
+  console.log(request.method, request.url)
+  if (request.method === 'PUT') {
+    const filename = diskCachePath + request.url
     const writeStream = fs.createWriteStream(filename)
 
     writeStream.on('error', (err) => {
@@ -111,16 +109,18 @@ const ingestServer = http.createServer((request, response) => {
     })
 
     request.on('data', (chunk) => {
+      if (!cacheMap.has(filename)) return
       cacheMap.get(filename).bufferList.append(chunk)
       cacheMap.get(filename).emit('data', chunk)
       writeStream.write(chunk)
     })
 
     request.on('end', () => {
+      if (!cacheMap.has(filename)) return
       cacheMap.get(filename).emit('end')
       writeStream.end()
 
-      if (request.url.includes('chunk-')) {
+      if (request.url.includes('chunk-') && diskCacheTimeout > 0) {
         setTimeout(() => {
           fs.unlinkSync(filename)
         }, diskCacheTimeout * 1000)
@@ -130,33 +130,29 @@ const ingestServer = http.createServer((request, response) => {
 })
 
 const deliveryServer = http.createServer((request, response) => {
+  console.log(request.method, request.url)
   if (request.method === 'GET') {
     const suffixIdx = request.url.lastIndexOf('.')
     let suffix = request.url.slice(suffixIdx, request.url.length)
-    let filename = diskCache + request.url
+    let filename = diskCachePath + request.url
 
     if (suffix.includes('?')) {
       suffix = suffix.slice(0, suffix.indexOf('?'))
-      filename = diskCache + request.url.slice(0, request.url.indexOf('?'))
+      filename = diskCachePath + request.url.slice(0, request.url.indexOf('?'))
     }
 
-    console.log(`GET ${request.url}`)
-
     switch (suffix) {
-      case '.html':
-        sendChunked(response, 'text/html', filename)
-        break
-      case '.js':
-        sendChunked(response, 'application/javascript', filename)
-        break
       case '.mpd':
         send(response, 'application/dash+xml', filename)
+        break
+      case '.m3u8':
+        send(response, 'application/x-mpegURL', filename)
         break
       case '.m4s':
         sendChunkedCached(response, 'video/iso.segment', filename)
         break
       default:
-        console.log(`404 bad suffix ${suffix}`)
+        console.log('404 bad suffix', suffix)
         send404(response)
         break
     }
@@ -169,14 +165,14 @@ deliveryServer.listen(deliveryPort)
 console.log(`Listening for ingest on port:   ${ingestPort}`)
 console.log(`Listening for delivery on port: ${deliveryPort}`)
 
-const getParams = () => {
+const getParams = _ => {
   return [
     '-hide_banner',
     '-re', '-f', 'lavfi',
     '-i', 'testsrc2=size=1280x720:rate=25,' +
     'drawbox=x=0:y=0:w=700:h=50:c=black@.6:t=fill,' +
     'drawtext=x=5:y=5:fontfile=FreeSans.ttf:fontsize=54:fontcolor=white:text=\'CAdViSE\',' +
-    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0] + '.00\':rate=25:tc24hmax=1,' +
+    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0].replace(/:/g, '\\:') + '\\:00\':rate=25:tc24hmax=1,' +
     'setparams=field_mode=prog:range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709,' +
     'format=yuv420p',
     '-re', '-f', 'lavfi',
@@ -204,24 +200,26 @@ const getParams = () => {
     '-pix_fmt', 'yuv420p',
     '-c:a', 'aac',
     '-b:a', '64k',
-    '-f', 'dash',
+    '-format_options', 'movflags=+cmaf',
+    '-live', '1',
+    '-update_period', '4',
     '-use_timeline', '0',
     '-use_template', '1',
     '-dash_segment_type', 'mp4',
     '-seg_duration', '2',
-    '-adaptation_sets', 'id=0,seg_duration=2,frag_type=duration,frag_duration=1,streams=v ' +
-    'id=1,seg_duration=2,frag_type=duration,frag_duration=1,streams=a',
-
+    '-adaptation_sets', 'id=0,frag_type=duration,frag_duration=1,streams=v ' +
+    'id=1,frag_type=duration,frag_duration=1,streams=a',
     '-write_prft', '1',
     '-utc_timing_url', 'https://time.akamai.com?iso&amp;ms',
     '-streaming', '1',
     '-ldash', '1',
+    '-lhls', '1',
+    '-strict', 'experimental',
     '-target_latency', '3',
     '-min_playback_rate', '0.96',
     '-max_playback_rate', '1.04',
-    '-time_shift_buffer_depth', '30',
-    '-format_options', 'movflags=+cmaf',
-    '-method', 'POST',
+
+    '-method', 'PUT',
     '-http_persistent', '1',
     '-timeout', '2',
     '-ignore_io_errors', '1',
