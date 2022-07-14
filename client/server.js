@@ -6,10 +6,7 @@ AWS.config.update({ region: 'eu-central-1' })
 const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const axios = require('axios')
 const { v4: uuidv4 } = require('uuid')
-// const { serverIp, id } = require('./config.json')
-
-const serverIp = 'localhost'
-const id = 'werfwerf'
+const { serverIp, id } = require('./config.json')
 
 app.get('/favicon.ico', async (request, response) => {
   response.send()
@@ -63,7 +60,7 @@ app.get('/log/:title/:eventName', async (request, response) => {
   response.send('ok')
 })
 
-app.listen(8079, () => {
+app.listen(80, () => {
   console.log('Listening on port 80')
 })
 
