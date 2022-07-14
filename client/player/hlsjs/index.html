@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>HLS JS Player v1.1.5 - Default</title>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.1.5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<div>
+    <video controls style="width: 720px;" id="video"></video>
+</div>
+<script type="text/javascript">
+  const videoSrc = 'http://localhost:8079/live/master.m3u8?playerABR=hlsjs115-default'
+  let logURL = 'http://localhost:8079/log/live/%event%?playerABR=hlsjs115-default'
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const video = document.getElementById('video')
+    const hls = new Hls({
+      'startLevel': -1,
+      'autoStartLoad': true,
+      'enableWorker': true,
+      'maxBufferLength': 1,
+      'liveBackBufferLength': 0,
+      'liveSyncDuration': 0,
+      'liveMaxLatencyDuration': 5,
+      'liveDurationInfinity': true,
+      'highBufferWatchdogPeriod': 1,
+      'lowLatencyMode': true
+    })
+    hls.loadSource(videoSrc)
+    hls.attachMedia(video)
+
+    hls.on(Hls.Events.ERROR, console.error)
+
+    const events = ['loadstart', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'seeking', 'seeked', 'ended', 'durationchange', 'play', 'pause', 'ratechange']
+
+    events.forEach(event => {
+      console.log(hls.bandwidthEstimate)
+      video.addEventListener(event, e => {
+        axios.get(logURL.replace('%event%', e.type) + '&noCache=' + (new Date()).getTime()).catch(error => {
+          console.log(error)
+        })
+      })
+    })
+
+    video.play()
+  })
+</script>
+</body>
+</html>

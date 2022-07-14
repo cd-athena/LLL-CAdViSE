@@ -6,7 +6,14 @@ AWS.config.update({ region: 'eu-central-1' })
 const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const axios = require('axios')
 const { v4: uuidv4 } = require('uuid')
-const { serverIp, id } = require('./config.json')
+// const { serverIp, id } = require('./config.json')
+
+const serverIp = 'localhost'
+const id = 'werfwerf'
+
+app.get('/favicon.ico', async (request, response) => {
+  response.send()
+})
 
 app.get('/player/:playerName/:fileName', async (request, response) => {
   const { playerName, fileName } = request.params
@@ -29,13 +36,13 @@ app.get('/:title/:fileName', async (request, response) => {
     url: BASEURL + title + '/' + fileName
   }
 
-  if (!fileName.includes('mpd')) {
+  if (!fileName.includes('mpd') && !fileName.includes('m3u8')) {
     axiosParams.responseType = 'stream'
   }
 
   axios(axiosParams).then((serverResponse) => {
-    if (fileName.includes('mpd')) {
-      const manifest = serverResponse.data.toString().replace(/.m4s/g, '.m4s?playerABR=' + playerABR)
+    if (fileName.includes('mpd') || fileName.includes('m3u8')) {
+      const manifest = serverResponse.data.toString().replace(/.m4s/g, '.m4s?playerABR=' + playerABR).replace(/.m3u8/g, '.m3u8?playerABR=' + playerABR)
       response.send(manifest)
     } else {
       serverResponse.data.pipe(response)
@@ -56,7 +63,7 @@ app.get('/log/:title/:eventName', async (request, response) => {
   response.send('ok')
 })
 
-app.listen(80, () => {
+app.listen(8079, () => {
   console.log('Listening on port 80')
 })
 
