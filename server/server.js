@@ -106,6 +106,12 @@ const ingestServer = http.createServer((request, response) => {
         this.responses.shift()
       }
       cacheMap.delete(filename)
+
+      if (request.url.includes('chunk-') && diskCacheTimeout > 0) {
+        setTimeout(() => {
+          fs.unlinkSync(filename)
+        }, diskCacheTimeout * 1000)
+      }
     })
 
     request.on('data', (chunk) => {
@@ -119,12 +125,6 @@ const ingestServer = http.createServer((request, response) => {
       if (!cacheMap.has(filename)) return
       cacheMap.get(filename).emit('end')
       writeStream.end()
-
-      if (request.url.includes('chunk-') && diskCacheTimeout > 0) {
-        setTimeout(() => {
-          fs.unlinkSync(filename)
-        }, diskCacheTimeout * 1000)
-      }
     })
   }
 })
