@@ -2,7 +2,7 @@
 
 ########################### configurations ###########################
 # some of these would be overwritten by arguments passed to the command
-players=("dashjs")
+players=("dashjs" "hlsjs")
 experiments=1
 id=$(date '+%s')
 awsProfile="default"
