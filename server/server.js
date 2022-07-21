@@ -205,6 +205,8 @@ const getParams = _ => {
     '-update_period', '4',
     '-use_timeline', '0',
     '-use_template', '1',
+    '-init_seg_name', '$Bandwidth$-init.$ext$',
+    '-media_seg_name', '$Bandwidth$-$Number$.$ext$',
     '-dash_segment_type', 'mp4',
     '-seg_duration', '2',
     '-adaptation_sets', 'id=0,frag_type=duration,frag_duration=1,streams=v ' +
