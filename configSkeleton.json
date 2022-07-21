@@ -1,6 +1,7 @@
 {
   "id": "--id--",
   "player": "--player--",
+  "playerIndex": "--playerIndex--",
   "serverIp": "--serverIp--",
   "experimentDuration": "--experimentDuration--",
   "shapes": "--shapes--"
