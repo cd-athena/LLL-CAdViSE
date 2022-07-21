@@ -13,10 +13,18 @@
     <video controls style="width: 720px;" id="video"></video>
 </div>
 <script type="text/javascript">
-  const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs440-default'
-  let logURL = 'http://localhost/log/live/%event%?playerABR=dashjs440-default'
-
   document.addEventListener('DOMContentLoaded', () => {
+    let index
+    window.location.search.substr(1).split('&').forEach(keyValueString => {
+      const keyValueArray = keyValueString.split('=')
+      if (keyValueArray[0] === 'playerIndex') {
+        index = keyValueArray[1]
+      }
+    })
+
+    const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs440-default-' + index
+    let logURL = 'http://localhost/log/live/%event%?playerABR=dashjs440-default-' + index
+
     const video = document.getElementById('video')
     const player = dashjs.MediaPlayer().create()
 
