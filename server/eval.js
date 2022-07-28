@@ -8,7 +8,6 @@ AWS.config.update({ region: 'eu-central-1' })
 const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const s3 = new AWS.S3()
 
-const networkShape = 'result'
 const resultPath = './'
 const generateVideo = false
 
@@ -65,7 +64,7 @@ let items = [];
 
     Object.keys(clients).forEach(playerABR => {
       let outputVideoFileName, outputAudioFileName
-      let counter = -1
+      let outputSegmentNumber = -1
       let currentBitrate = 0
       let stallsTime = 0 // second
       let startUpTime = 0 // second
@@ -75,7 +74,7 @@ let items = [];
       let inputPath = 'dataset/'
       const displaySize = '1280x720'
       const stallTolerance = 0.001
-      const audioBitrate = 64000
+      const audioBitrate = 128000
       const stallVideoPath = 'in/loading.mp4'
       const stallVideoDuration = 1.023 // second
       const segmentDuration = 1 // second
@@ -98,19 +97,21 @@ let items = [];
 
       let startTime = 0
       clients[playerABR].forEach(item => {
-        if (item.name === 'manifest.mpd' && item.action === 'requesting') {
-          startTime = moment(item.time)
-        }
-        if (item.name === 'playing' && item.action === 'event' && startUpTime === 0) {
-          startUpTime = parseFloat((moment(item.time).diff(startTime) / 1000).toFixed(2))
-          ++counter
-          stalling.push([0, startUpTime])
+        if (startUpTime === 0) {
+          if ((item.name.includes('mpd') || item.name.includes('m3u8')) && item.action === 'requesting') {
+            startTime = moment(item.time)
+          }
+          if (item.name === 'playing' && item.action === 'event') {
+            startUpTime = parseFloat((moment(item.time).diff(startTime) / 1000).toFixed(2))
+            ++outputSegmentNumber
+            stalling.push([0, startUpTime])
+          }
         }
       })
 
       clients[playerABR].forEach(item => {
         if (mediaTime + stallsTime + startUpTime < experimentDuration) {
-          if (item.name !== 'manifest.mpd' && !item.name.includes(audioBitrate) && !item.name.includes('init') && item.action === 'requesting') {
+          if (!item.name.includes('mpd') && !item.name.includes('m3u8') && !item.name.includes(audioBitrate) && !item.name.includes('init') && item.action === 'requesting') {
             const [bitrate, segmentNumber] = item.name.split('-')
             if (!stitchedSegmentNames.includes(item.name)) {
               stitchedSegmentNames.push(item.name)
@@ -125,8 +126,8 @@ let items = [];
               if (bitrate !== currentBitrate || reInit) {
                 reInit = false
                 currentBitrate = bitrate
-                outputVideoFileName = outputPath + '/video-' + (++counter) + '.mp4'
-                outputAudioFileName = outputPath + '/audio-' + counter + '.mp4'
+                outputVideoFileName = outputPath + '/video-' + (++outputSegmentNumber) + '.mp4'
+                outputAudioFileName = outputPath + '/audio-' + outputSegmentNumber + '.mp4'
                 fs.appendFileSync(outputVideoFileName, fs.readFileSync(inputPath + bitrate + '-init.m4s'))
                 fs.appendFileSync(outputAudioFileName, fs.readFileSync(inputPath + audioBitrate + '-init.m4s'))
               }
@@ -150,7 +151,7 @@ let items = [];
                 reInit = true
                 stalling.push([mediaTime, stallDuration])
                 stallsTime += stallDuration
-                ++counter
+                ++outputSegmentNumber
                 waitingFound = false
               }
             })
@@ -159,7 +160,7 @@ let items = [];
       })
 
       let currentStallIndex = 0
-      for (let i = 0; i < counter + 1; i++) {
+      for (let i = 0; i < outputSegmentNumber + 1; i++) {
         ffmpegJobs.push(new Promise((resolve, reject) => {
           if (fs.existsSync(outputPath + '/video-' + i + '.mp4')) {
             spawnSync(pathToFfmpeg, [
@@ -274,7 +275,7 @@ let items = [];
         }))
       }
 
-      Promise.all(ffmpegJobs).then(() => {
+      Promise.all(ffmpegJobs).then(async () => {
         const ITUP1203Extractor = spawnSync('python3', ITUP1203Args)
         const extractorOutput = ITUP1203Extractor.stdout.toString()
         fs.writeFileSync(outputPath + '/ITUP1203Input.json', extractorOutput)
@@ -326,17 +327,31 @@ let items = [];
           )
         }
 
-        try {
-          s3.putObject({
-            Body: fs.readFileSync(resultPath + experimentId + '.csv'),
-            Bucket: 'lllc-qoe',
-            Key: experimentId + '.csv'
-          }).promise()
-        } catch (e) {
-          console.error(new Error(experimentId + ' Unable to upload results. ' + JSON.stringify(e, null, 2)))
-        }
-
         console.log(experimentId, playerABR, 'done.')
+
+        if (playerABR === Object.keys(clients)[Object.keys(clients).length - 1]) {
+          if (generateVideo) {
+            try {
+              await s3.putObject({
+                Body: fs.readFileSync(resultPath + experimentId + '-' + playerABR + '.mp4'),
+                Bucket: 'lllc-qoe',
+                Key: experimentId + '-' + playerABR + '.mp4'
+              }).promise()
+            } catch (e) {
+              console.error(new Error(experimentId + ' Unable to upload stitched video. ' + JSON.stringify(e, null, 2)))
+            }
+          }
+
+          try {
+            await s3.putObject({
+              Body: fs.readFileSync(resultPath + experimentId + '.csv'),
+              Bucket: 'lllc-qoe',
+              Key: experimentId + '.csv'
+            }).promise()
+          } catch (e) {
+            console.error(new Error(experimentId + ' Unable to upload results. ' + JSON.stringify(e, null, 2)))
+          }
+        }
       })
     })
   } else {
