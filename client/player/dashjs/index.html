@@ -1,11 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Dash JS Player v4.4.0 - Dynamic</title>
+    <title>Dash JS Player v4.4.1 - Dynamic</title>
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="text/javascript" src="https://cdn.dashjs.org/v4.4.0/dash.all.min.js"></script>
+    <script type="text/javascript" src="https://cdn.dashjs.org/v4.4.1/dash.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
@@ -13,10 +13,18 @@
     <video controls style="width: 720px;" id="video"></video>
 </div>
 <script type="text/javascript">
-  const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs440-default'
-  let logURL = 'http://localhost/log/live/%event%?playerABR=dashjs440-default'
-
   document.addEventListener('DOMContentLoaded', () => {
+    let index
+    window.location.search.substr(1).split('&').forEach(keyValueString => {
+      const keyValueArray = keyValueString.split('=')
+      if (keyValueArray[0] === 'playerIndex') {
+        index = keyValueArray[1]
+      }
+    })
+
+    const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs441-default-' + index
+    let logURL = 'http://localhost/log/live/%event%?playerABR=dashjs441-default-' + index
+
     const video = document.getElementById('video')
     const player = dashjs.MediaPlayer().create()
 
@@ -37,7 +45,7 @@
     player.updateSettings({
       streaming: {
         delay: {
-          liveDelay: 3
+          liveDelay: 5
         },
         liveCatchup: {
           maxDrift: 0,

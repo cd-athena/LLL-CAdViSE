@@ -10,11 +10,14 @@
   "license": "Refer to GitHub repository",
   "repository": "https://github.com/cd-athena/LLL-CAdViSE",
   "dependencies": {
+    "bl": "^5.0.0",
     "ffmpeg-static": "^5.0.0",
+    "ffprobe-static": "^3.1.0",
     "fs-extra": "^10.1.0",
-    "bl": "^5.0.0"
+    "moment": "^2.29.4"
   },
   "devDependencies": {
+    "aws-sdk": "^2.1177.0",
     "standard": "^17.0.0"
   }
 }

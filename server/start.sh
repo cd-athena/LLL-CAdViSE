@@ -1,13 +1,15 @@
 #!/bin/bash
 
+cd /home/ec2-user/ || exit 1
 config=$(cat /home/ec2-user/config.json)
 
+experimentDuration=$(echo "$config" | jq -r '.experimentDuration')
 durations=($(echo "$config" | jq -r '.shapes[].duration'))
 ingresses=($(echo "$config" | jq -r '.shapes[].serverIngress'))
 egresses=($(echo "$config" | jq -r '.shapes[].serverEgress'))
 latencies=($(echo "$config" | jq -r '.shapes[].serverLatency'))
+experimentId=$(echo "$config" | jq -r '.id')
 
-cd /home/ec2-user/ || exit 1
 sudo pm2 start server.js
 
 shaperIndex=0
@@ -28,5 +30,8 @@ while [ $shaperIndex -lt "${#durations[@]}" ]; do
   sleep $((durations[shaperIndex]))
   ((shaperIndex++))
 done
+
+sudo pm2 stop server.js
+sudo node eval.js "$experimentId" "$experimentDuration"
 
 exit 0
