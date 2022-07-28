@@ -228,7 +228,7 @@ while ! nc -w5 -z "$serverPublicIp" 22; do
 done
 
 showMessage "Injecting scripts and configurations into server instance"
-scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh server/server.js server/package.json server/FreeSans.ttf server/eval.js "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
+scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh server/server.js server/streams.json server/package.json server/FreeSans.ttf server/eval.js "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
 
 showMessage "Executing initializer script(s)"
 SSMCommandId=$(aws ssm send-command \
