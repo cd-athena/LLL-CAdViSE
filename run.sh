@@ -1,20 +1,21 @@
 #!/bin/bash
 
-players=("dashjs" "hlsjs")
+players=("dashjs" "hlsjs" "dashjsl2a" "dashjslolp" "dashjsstallion")
 id=$(date '+%s')
 awsProfile="default"
-placementGroup="pptCluster"
+placementGroup="lll-cadvise-cluster"
 awsKey=""
 awsIAMRole="SSMEnabled"
-awsSecurityGroup="ppt-security-group"
+awsSecurityGroup="lll-cadvise-sg"
 serverInstanceId=""
 clientInstanceIds=""
 networkConfig=""
 clientInstancesType="m5ad.2xlarge"
-serverInstancesType="m5ad.24xlarge"
+serverInstancesType="m5ad.12xlarge"
 instanceRegion="eu-central-1"
 instanceAvailabilityZone="eu-central-1b"
 clientWarmupTime=1 #s
+QoECalc=0
 
 showError() {
   now=$(date -u +"%H:%M:%S")
@@ -49,6 +50,9 @@ for argument in "$@"; do
       clientIngresses=($(echo "$networkConfig" | jq '.[].clientIngress'))
       clientEgresses=($(echo "$networkConfig" | jq '.[].clientEgress'))
       clientLatencies=($(echo "$networkConfig" | jq '.[].clientLatency'))
+      ;;
+    "--withQoE")
+      QoECalc=1
       ;;
     "--cluster")
       nextArgumentIndex=$((argumentIndex + 2))
@@ -169,6 +173,7 @@ configSkeleton=$(cat configSkeleton.json)
 ((durationOfExperiment += clientWarmupTime)) # warm up client
 config="${configSkeleton/--id--/$id}"
 config="${config/--serverIp--/$serverPrivateIp}"
+config="${config/--QoECalc--/$QoECalc}"
 config="${config/--experimentDuration--/$durationOfExperiment}"
 
 shaperIndex=0
@@ -228,7 +233,7 @@ while ! nc -w5 -z "$serverPublicIp" 22; do
 done
 
 showMessage "Injecting scripts and configurations into server instance"
-scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh server/server.js server/streams.json server/package.json server/FreeSans.ttf server/eval.js "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
+scp -oStrictHostKeyChecking=no -i "./$awsKey.pem" server/init.sh server/start.sh server/server.js server/streams.json server/package.json server/FreeSans.ttf server/evaluator.js "$id/config.json" ec2-user@"$serverPublicIp":/home/ec2-user
 
 showMessage "Executing initializer script(s)"
 SSMCommandId=$(aws ssm send-command \
@@ -236,8 +241,8 @@ SSMCommandId=$(aws ssm send-command \
   --document-name "AWS-RunShellScript" \
   --comment "Initialize" \
   --parameters commands="/home/ec2-user/init.sh" \
-  --output-s3-bucket-name "ppt-output" \
-  --output-s3-key-prefix "init-out/$id" \
+  --output-s3-bucket-name "lll-cadvise-output" \
+  --output-s3-key-prefix "init/$id" \
   --query "Command.CommandId" \
   --profile $awsProfile | sed -e 's/^"//' -e 's/"$//')
 
@@ -269,8 +274,8 @@ SSMCommandId=$(aws ssm send-command \
   --document-name "AWS-RunShellScript" \
   --comment "Start" \
   --parameters commands="/home/ec2-user/start.sh" \
-  --output-s3-bucket-name "ppt-output" \
-  --output-s3-key-prefix "start-out/$id" \
+  --output-s3-bucket-name "lll-cadvise-output" \
+  --output-s3-key-prefix "start/$id" \
   --query "Command.CommandId" \
   --profile $awsProfile | sed -e 's/^"//' -e 's/"$//')
 

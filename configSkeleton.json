@@ -3,6 +3,7 @@
   "player": "--player--",
   "playerIndex": "--playerIndex--",
   "serverIp": "--serverIp--",
+  "QoECalc": "--QoECalc--",
   "experimentDuration": "--experimentDuration--",
   "shapes": "--shapes--"
 }

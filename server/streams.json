@@ -23,10 +23,5 @@
     "text": "720p",
     "resolution": "1280x720",
     "bitrate": "3000k"
-  },
-  "[v1080p]": {
-    "text": "1080p",
-    "resolution": "1920x1080",
-    "bitrate": "5800k"
   }
 }
