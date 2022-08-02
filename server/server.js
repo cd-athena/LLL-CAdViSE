@@ -10,8 +10,8 @@ const deliveryPort = 80
 const cacheMap = new Map()
 const diskCachePath = './dataset'
 const diskCacheTimeout = 0 // seconds || 0 for no clean-ups
-const addedDelay = 333 // each try happens after 3ms
-const retryBeforeNotfound = new Map()
+const retryBeforeNotFound = 333 // each try happens after 3ms
+const retryBeforeNotFoundMap = new Map()
 
 class Cache extends EventEmitter {
   constructor () {
@@ -36,11 +36,11 @@ const sendChunked = (response, content_type, filename) => {
   const readStream = fs.createReadStream(filename)
 
   readStream.on('error', _ => {
-    if (!retryBeforeNotfound.has(filename)) {
-      retryBeforeNotfound.set(filename, addedDelay)
+    if (!retryBeforeNotFoundMap.has(filename)) {
+      retryBeforeNotFoundMap.set(filename, retryBeforeNotFound)
     }
-    if (retryBeforeNotfound.get(filename) > 0) {
-      retryBeforeNotfound.set(filename, retryBeforeNotfound.get(filename) - 1)
+    if (retryBeforeNotFoundMap.get(filename) > 0) {
+      retryBeforeNotFoundMap.set(filename, retryBeforeNotFoundMap.get(filename) - 1)
       setTimeout(_ => {
         sendChunkedCached(response, content_type, filename)
       }, 3)
@@ -258,7 +258,7 @@ const getParams = _ => {
     '-ldash', '1',
     '-lhls', '1',
     '-strict', 'experimental',
-    '-target_latency', '5',
+    '-target_latency', '3',
     '-min_playback_rate', '0.96',
     '-max_playback_rate', '1.04',
     '-method', 'PUT',

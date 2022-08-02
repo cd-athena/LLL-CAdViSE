@@ -1,7 +1,7 @@
 const fs = require('fs')
 const { spawnSync } = require('child_process')
-const pathToFfmpeg = require('ffmpeg-static')
-const ffprobe = require('ffprobe-static')
+const pathToFFMPEG = require('ffmpeg-static')
+const FFPROBE = require('ffprobe-static')
 const moment = require('moment')
 const AWS = require('aws-sdk')
 AWS.config.update({ region: 'eu-central-1' })
@@ -21,10 +21,18 @@ if (!experimentDuration || experimentDuration === '') {
   console.error(new Error('Invalid experiment duration'))
 }
 
-fs.appendFileSync(resultPath + experimentId + '.csv', 'experimentId,sequenceTitle,playerABR,meanITUP1203,mediaTime,stallsTime,startUpTime,qualitySwitch,averageBitrate\n')
+const QoECalc = process.argv.slice(2)[2]
+if (!QoECalc || QoECalc === '') {
+  console.error(new Error('Invalid QoECalc argument'))
+}
+
+fs.appendFileSync(
+  resultPath + experimentId + '.csv',
+  'experimentId,sequenceTitle,playerABR,playbackDuration,stallsDuration,startUpDelay,seekedDuration,qualitySwitches,minBitrate,maxBitrate,averageBitrate,minLatency,maxLatency,averageLatency,minPlaybackRate,maxPlaybackRate,averagePlaybackRate' + (QoECalc === '1' ? ',MOS\n' : '\n')
+)
 
 const queryParams = {
-  TableName: 'ppt-logs',
+  TableName: 'lll-cadvise-logs',
   IndexName: 'experimentId-index',
   KeyConditionExpression: '#experimentId = :experimentId',
   ExpressionAttributeNames: {
@@ -66,9 +74,10 @@ let items = [];
       let outputVideoFileName, outputAudioFileName
       let outputSegmentNumber = -1
       let currentBitrate = 0
-      let stallsTime = 0 // second
-      let startUpTime = 0 // second
-      let mediaTime = 0
+      let stallsDuration = 0 // second
+      let startUpDelay = 0 // second
+      let playbackDuration = 0 // second
+      let seekedDuration = 0 // second
       let reInit = false
       let qualitySwitchNumber = 0
       let inputPath = 'dataset/'
@@ -80,8 +89,10 @@ let items = [];
       const segmentDuration = 1 // second
       const frameRate = 25
       const bitrates = []
+      const latencies = []
+      const playbackRates = []
       const stitchedSegmentNames = []
-      const stalling = []
+      const stalls = []
       const ffmpegJobs = []
       const ITUP1203Args = [
         '-m', 'itu_p1203.extractor',
@@ -96,26 +107,39 @@ let items = [];
       fs.writeFileSync(outputPath + '/CAdViSE' + '.json', JSON.stringify(clients[playerABR]))
 
       let startTime = 0
+      let seekTime = 0
       clients[playerABR].forEach(item => {
-        if (startUpTime === 0) {
+        if (item.name === 'latency-rate') {
+          const content = item.content.split('-')
+          if (parseFloat(content[0])) latencies.push(content[0])
+          if (parseFloat(content[1])) playbackRates.push(content[1])
+        }
+        if (startUpDelay === 0) {
           if ((item.name.includes('mpd') || item.name.includes('m3u8')) && item.action === 'requesting') {
             startTime = moment(item.time)
           }
           if (item.name === 'playing' && item.action === 'event') {
-            startUpTime = parseFloat((moment(item.time).diff(startTime) / 1000).toFixed(2))
+            startUpDelay = parseFloat((moment(item.time).diff(startTime) / 1000).toString())
             ++outputSegmentNumber
-            stalling.push([0, startUpTime])
+            stalls.push([0, startUpDelay])
           }
+        }
+        if (item.name === 'seeking') {
+          seekTime = moment(item.time)
+        }
+        if (item.name === 'seeked' && seekTime !== 0) {
+          seekedDuration += parseFloat((moment(item.time).diff(seekTime) / 1000).toString())
+          seekTime = 0
         }
       })
 
       clients[playerABR].forEach(item => {
-        if (mediaTime + stallsTime + startUpTime < experimentDuration) {
+        if (playbackDuration + stallsDuration + startUpDelay < experimentDuration) {
           if (!item.name.includes('mpd') && !item.name.includes('m3u8') && !item.name.includes(audioBitrate) && !item.name.includes('init') && item.action === 'requesting') {
             const [bitrate, segmentNumber] = item.name.split('-')
             if (!stitchedSegmentNames.includes(item.name)) {
               stitchedSegmentNames.push(item.name)
-              mediaTime += segmentDuration
+              playbackDuration += segmentDuration
 
               bitrates.push(parseInt(bitrate))
 
@@ -145,12 +169,12 @@ let items = [];
               }
               if (waitingFound && nextItem.action === 'event' && nextItem.name === 'playing') {
                 let stallDuration = parseFloat((moment(nextItem.time).diff(startStall) / 1000).toFixed(3))
-                while (stallDuration + mediaTime + stallsTime + startUpTime > experimentDuration) {
+                while (stallDuration + playbackDuration + stallsDuration + startUpDelay > experimentDuration) {
                   stallDuration -= stallTolerance
                 }
                 reInit = true
-                stalling.push([mediaTime, stallDuration])
-                stallsTime += stallDuration
+                stalls.push([playbackDuration, stallDuration])
+                stallsDuration += stallDuration
                 ++outputSegmentNumber
                 waitingFound = false
               }
@@ -163,7 +187,7 @@ let items = [];
       for (let i = 0; i < outputSegmentNumber + 1; i++) {
         ffmpegJobs.push(new Promise((resolve, reject) => {
           if (fs.existsSync(outputPath + '/video-' + i + '.mp4')) {
-            spawnSync(pathToFfmpeg, [
+            spawnSync(pathToFFMPEG, [
               '-y',
               '-i', outputPath + '/video-' + i + '.mp4',
               '-i', outputPath + '/audio-' + i + '.mp4',
@@ -178,9 +202,9 @@ let items = [];
 
             ITUP1203Args.push(outputPath + '/seg-' + i + '.mp4')
           } else if (generateVideo) {
-            const stallDuration = stalling[currentStallIndex++][1]
+            const stallDuration = stalls[currentStallIndex++][1]
             if (stallDuration <= stallVideoDuration) {
-              spawnSync(pathToFfmpeg, [
+              spawnSync(pathToFFMPEG, [
                 '-y',
                 '-i', stallVideoPath,
                 '-to', stallDuration,
@@ -194,7 +218,7 @@ let items = [];
               }
 
               if (leftStallDuration > stallTolerance) {
-                spawnSync(pathToFfmpeg, [
+                spawnSync(pathToFFMPEG, [
                   '-y',
                   '-i', stallVideoPath,
                   '-to', leftStallDuration,
@@ -204,7 +228,7 @@ let items = [];
                 fs.appendFileSync(outputPath + '/loading.txt', 'file \'temp-loading.mp4\'\n')
               }
 
-              spawnSync(pathToFfmpeg, [
+              spawnSync(pathToFFMPEG, [
                 '-y',
                 '-f', 'concat',
                 '-safe', 0,
@@ -220,7 +244,7 @@ let items = [];
             }
 
             if (fs.existsSync(outputPath + '/seg-' + (i - 1) + '.mp4')) {
-              const ffprobeLastSegment = spawnSync(ffprobe.path, [
+              const ffprobeLastSegment = spawnSync(FFPROBE.path, [
                 '-v', 'error',
                 '-select_streams', 'v:0',
                 '-show_entries', 'stream=width,height,sample_aspect_ratio,display_aspect_ratio',
@@ -233,7 +257,7 @@ let items = [];
               const sar = lastSegmentProperties.streams[0].sample_aspect_ratio
               const dar = lastSegmentProperties.streams[0].display_aspect_ratio
 
-              spawnSync(pathToFfmpeg, [
+              spawnSync(pathToFFMPEG, [
                 '-y',
                 '-i', outputPath + '/stitchedLoading.mp4',
                 '-r', frameRate,
@@ -244,7 +268,7 @@ let items = [];
 
               fs.unlinkSync(outputPath + '/stitchedLoading.mp4')
 
-              spawnSync(pathToFfmpeg, [
+              spawnSync(pathToFFMPEG, [
                 '-sseof', '-3',
                 '-i', outputPath + '/seg-' + (i - 1) + '.mp4',
                 '-update', 1,
@@ -252,7 +276,7 @@ let items = [];
                 outputPath + '/lastSegmentLastFrame.png'
               ])
 
-              spawnSync(pathToFfmpeg, [
+              spawnSync(pathToFFMPEG, [
                 '-y',
                 '-framerate', frameRate,
                 '-loop', 1,
@@ -276,48 +300,62 @@ let items = [];
       }
 
       Promise.all(ffmpegJobs).then(async () => {
-        const ITUP1203Extractor = spawnSync('python3', ITUP1203Args)
-        const extractorOutput = ITUP1203Extractor.stdout.toString()
-        fs.writeFileSync(outputPath + '/ITUP1203Input.json', extractorOutput)
+        let resultData = experimentId + ',' + sequenceTitle + ',' +
+          playerABR + ',' + playbackDuration.toFixed(2) + ',' +
+          stallsDuration.toFixed(2) + ',' + startUpDelay.toFixed(2) + ',' + seekedDuration.toFixed(2) + ',' + qualitySwitchNumber +
+          ',' + Math.min.apply(null, bitrates).toFixed(2) +
+          ',' + Math.max.apply(null, bitrates).toFixed(2) +
+          ',' + bitrates.reduce(function (p, c, i, a) { return p + (c / a.length) }, 0).toFixed(2) +
+          ',' + Math.min.apply(null, latencies).toFixed(2) +
+          ',' + Math.max.apply(null, latencies).toFixed(2) +
+          ',' + latencies.reduce(function (p, c, i, a) { return p + (c / a.length) }, 0).toFixed(2) +
+          ',' + Math.min.apply(null, playbackRates).toFixed(2) +
+          ',' + Math.max.apply(null, playbackRates).toFixed(2) +
+          ',' + playbackRates.reduce(function (p, c, i, a) { return p + (c / a.length) }, 0).toFixed(2)
 
-        let ITUP1203Input
-        try {
-          ITUP1203Input = JSON.parse(extractorOutput)
-        } catch (exception) {
-          console.error(experimentId, playerABR, ITUP1203Extractor.stderr.toString(), exception.toString())
+        if (QoECalc === '1') {
+          const ITUP1203Extractor = spawnSync('python3', ITUP1203Args)
+          const extractorOutput = ITUP1203Extractor.stdout.toString()
+          fs.writeFileSync(outputPath + '/ITUP1203Input.json', extractorOutput)
+
+          let ITUP1203Input
+          try {
+            ITUP1203Input = JSON.parse(extractorOutput)
+          } catch (exception) {
+            console.error(experimentId, playerABR, ITUP1203Extractor.stderr.toString(), exception.toString())
+          }
+          ITUP1203Input.IGen.displaySize = displaySize
+          ITUP1203Input.I23.stalling = stalls
+
+          const ITUP1203 = spawnSync('python3', [
+            '-m', 'itu_p1203',
+            '--accept-notice',
+            outputPath + '/ITUP1203Input.json'
+          ])
+          const metrics = ITUP1203.stdout.toString()
+          fs.writeFileSync(outputPath + '/ITUP1203.json', metrics)
+
+          let metricsJson
+          try {
+            metricsJson = JSON.parse(metrics)
+          } catch (exception) {
+            console.error(experimentId, playerABR, ITUP1203.stderr.toString(), exception.toString())
+          }
+
+          let total = 0
+          Object.keys(metricsJson).forEach(segmentName => {
+            total += metricsJson[segmentName].O46
+          })
+
+          const meanITUP1203 = total / Object.keys(metricsJson).length
+
+          resultData += ',' + meanITUP1203.toFixed(2)
         }
-        ITUP1203Input.IGen.displaySize = displaySize
-        ITUP1203Input.I23.stalling = stalling
 
-        const ITUP1203 = spawnSync('python3', [
-          '-m', 'itu_p1203',
-          '--accept-notice',
-          outputPath + '/ITUP1203Input.json'
-        ])
-        const metrics = ITUP1203.stdout.toString()
-        fs.writeFileSync(outputPath + '/ITUP1203.json', metrics)
-
-        let metricsJson
-        try {
-          metricsJson = JSON.parse(metrics)
-        } catch (exception) {
-          console.error(experimentId, playerABR, ITUP1203.stderr.toString(), exception.toString())
-        }
-
-        let total = 0
-        Object.keys(metricsJson).forEach(segmentName => {
-          total += metricsJson[segmentName].O46
-        })
-
-        const meanITUP1203 = total / Object.keys(metricsJson).length
-
-        fs.appendFileSync(resultPath + experimentId + '.csv', experimentId + ',' + sequenceTitle + ',' +
-          playerABR + ',' + meanITUP1203.toFixed(2) + ',' + mediaTime.toFixed(2) + ',' +
-          stallsTime.toFixed(2) + ',' + startUpTime.toFixed(2) + ',' + qualitySwitchNumber +
-          ',' + bitrates.reduce(function (p, c, i, a) { return p + (c / a.length) }, 0).toFixed(2) + '\n')
+        fs.appendFileSync(resultPath + experimentId + '.csv', resultData + '\n')
 
         if (generateVideo) {
-          spawnSync(pathToFfmpeg, [
+          spawnSync(pathToFFMPEG, [
             '-y',
             '-f', 'concat',
             '-safe', 0,
@@ -334,8 +372,8 @@ let items = [];
             try {
               await s3.putObject({
                 Body: fs.readFileSync(resultPath + experimentId + '-' + playerABR + '.mp4'),
-                Bucket: 'lllc-qoe',
-                Key: experimentId + '-' + playerABR + '.mp4'
+                Bucket: 'lll-cadvise-output',
+                Key: 'result/' + experimentId + '-' + playerABR + '.mp4'
               }).promise()
             } catch (e) {
               console.error(new Error(experimentId + ' Unable to upload stitched video. ' + JSON.stringify(e, null, 2)))
@@ -345,8 +383,8 @@ let items = [];
           try {
             await s3.putObject({
               Body: fs.readFileSync(resultPath + experimentId + '.csv'),
-              Bucket: 'lllc-qoe',
-              Key: experimentId + '.csv'
+              Bucket: 'lll-cadvise-output',
+              Key: 'result/' + experimentId + '.csv'
             }).promise()
           } catch (e) {
             console.error(new Error(experimentId + ' Unable to upload results. ' + JSON.stringify(e, null, 2)))

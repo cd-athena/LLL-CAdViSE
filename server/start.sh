@@ -9,6 +9,7 @@ ingresses=($(echo "$config" | jq -r '.shapes[].serverIngress'))
 egresses=($(echo "$config" | jq -r '.shapes[].serverEgress'))
 latencies=($(echo "$config" | jq -r '.shapes[].serverLatency'))
 experimentId=$(echo "$config" | jq -r '.id')
+QoECalc=$(echo "$config" | jq -r '.QoECalc')
 
 sudo pm2 start server.js
 
@@ -32,6 +33,6 @@ while [ $shaperIndex -lt "${#durations[@]}" ]; do
 done
 
 sudo pm2 stop server.js
-sudo node eval.js "$experimentId" "$experimentDuration"
+sudo node evaluator.js "$experimentId" "$experimentDuration" "$QoECalc"
 
 exit 0
