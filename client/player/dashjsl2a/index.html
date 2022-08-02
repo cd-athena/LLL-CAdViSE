@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Dash JS Player v4.4.1 - Dynamic</title>
+    <title>Dash JS Player v4.4.1 - L2A</title>
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,8 +23,8 @@
       }
     })
 
-    const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs441-default-' + index
-    let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=dashjs441-default-' + index
+    const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs441-l2a-' + index
+    let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=dashjs441-l2a-' + index
 
     const video = document.getElementById('video')
     const player = dashjs.MediaPlayer().create()
@@ -44,8 +44,12 @@
     player.updateSettings({
       streaming: {
         liveCatchup: {
-          maxDrift: 0, // no seeking
-          playbackRate: 0.1 // percentage
+          maxDrift: 0,
+          playbackRate: 0.1
+        },
+        abr: {
+          ABRStrategy: 'abrL2A',
+          fetchThroughputCalculationMode: 'abrFetchThroughputCalculationMoofParsing'
         }
       }
     })

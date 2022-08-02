@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>HLS JS Player v1.1.5 - Default</title>
+    <title>HLS JS Player v1.2.0 - Default</title>
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.1.5"></script>
+    <link rel="icon" href="data:,">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.2.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
@@ -22,8 +23,8 @@
       }
     })
 
-    const videoSrc = 'http://localhost/live/master.m3u8?playerABR=hlsjs115-default-' + index
-    let logURL = 'http://localhost/log/live/%event%?playerABR=hlsjs115-default-' + index
+    const videoSrc = 'http://localhost/live/master.m3u8?playerABR=hlsjs120-default-' + index
+    let logURL = 'http://localhost/log/live/%event%?playerABR=hlsjs120-default-' + index
 
     const video = document.getElementById('video')
     const hls = new Hls({

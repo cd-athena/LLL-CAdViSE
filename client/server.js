@@ -7,10 +7,7 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const axios = require('axios')
 const { v4: uuidv4 } = require('uuid')
 const { serverIp, id } = require('./config.json')
-
-app.get('/favicon.ico', async (request, response) => {
-  response.send()
-})
+const logManifest = false
 
 app.get('/player/:playerName/:fileName', async (request, response) => {
   const { playerName, fileName } = request.params
@@ -23,7 +20,7 @@ app.get('/:title/:fileName', async (request, response) => {
   const BASEURL = 'http://' + serverIp + '/'
 
   try {
-    await log(playerABR, 'requesting', title, fileName)
+    await log(playerABR, 'requesting', title, fileName, 'NA')
   } catch (error) {
     return response.send('Failed to record the log: ' + JSON.stringify(error))
   }
@@ -37,22 +34,29 @@ app.get('/:title/:fileName', async (request, response) => {
     axiosParams.responseType = 'stream'
   }
 
-  axios(axiosParams).then((serverResponse) => {
+  axios(axiosParams).then(async serverResponse => {
     if (fileName.includes('mpd') || fileName.includes('m3u8')) {
       const manifest = serverResponse.data.toString().replace(/.m4s/g, '.m4s?playerABR=' + playerABR).replace(/.m3u8/g, '.m3u8?playerABR=' + playerABR)
       response.send(manifest)
+      if (logManifest) {
+        try {
+          await log(playerABR, 'received', title, fileName, manifest)
+        } catch (error) {
+          console.log(JSON.stringify(error))
+        }
+      }
     } else {
       serverResponse.data.pipe(response)
     }
   }).catch(console.error)
 })
 
-app.get('/log/:title/:eventName', async (request, response) => {
-  const { title, eventName } = request.params
+app.get('/log/:title/:eventName/:content', async (request, response) => {
+  const { title, eventName, content } = request.params
   const { playerABR } = request.query
 
   try {
-    await log(playerABR, 'event', title, eventName)
+    await log(playerABR, 'event', title, eventName, content)
   } catch (error) {
     return response.send('Failed to record the log: ' + JSON.stringify(error))
   }
@@ -64,17 +68,23 @@ app.listen(80, () => {
   console.log('Listening on port 80')
 })
 
-const log = async (playerABR, action, title, name) => {
+const log = async (playerABR, action, title, name, content) => {
+  const logItem = {
+    id: uuidv4(),
+    experimentId: id,
+    time: (new Date()).toISOString(),
+    playerABR,
+    action,
+    title,
+    name
+  }
+
+  if (content !== 'NA') {
+    logItem.content = content
+  }
+
   return dynamoDb.put({
-    TableName: 'ppt-logs',
-    Item: {
-      id: uuidv4(),
-      experimentId: id,
-      time: (new Date()).toISOString(),
-      playerABR,
-      action,
-      title,
-      name
-    }
+    TableName: 'lll-cadvise-logs',
+    Item: logItem
   }).promise()
 }
