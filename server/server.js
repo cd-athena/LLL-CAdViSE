@@ -1,5 +1,5 @@
 const childProcess = require('child_process')
-const pathToFfmpeg = require('ffmpeg-static')
+const pathToFFMPEG = require('ffmpeg-static')
 const BufferList = require('bl')
 const EventEmitter = require('events')
 const fs = require('fs-extra')
@@ -32,7 +32,7 @@ const send = (response, contentType, filename) => {
   response.end()
 }
 
-const sendChunked = (response, content_type, filename) => {
+const sendChunked = (response, contentType, filename) => {
   const readStream = fs.createReadStream(filename)
 
   readStream.on('error', _ => {
@@ -42,7 +42,7 @@ const sendChunked = (response, content_type, filename) => {
     if (retryBeforeNotFoundMap.get(filename) > 0) {
       retryBeforeNotFoundMap.set(filename, retryBeforeNotFoundMap.get(filename) - 1)
       setTimeout(_ => {
-        sendChunkedCached(response, content_type, filename)
+        sendChunkedCached(response, contentType, filename)
       }, 3)
     } else {
       console.log(`404 bad file ${filename}`)
@@ -52,7 +52,7 @@ const sendChunked = (response, content_type, filename) => {
 
   readStream.once('readable', _ => {
     response.writeHead(200, {
-      'Content-Type': content_type,
+      'Content-Type': contentType,
       'Transfer-Encoding': 'chunked',
       'Access-Control-Allow-Origin': '*'
     })
@@ -103,17 +103,17 @@ const ingestServer = http.createServer((request, response) => {
     const filename = diskCachePath + request.url
     const writeStream = fs.createWriteStream(filename)
 
-    writeStream.on('error', (err) => {
+    writeStream.on('error', error => {
       send500(response)
-      throw err
+      throw error
     })
 
     cacheMap.set(filename, new Cache())
 
     cacheMap.get(filename).on('end', function () {
       this.ended = true
-      const l = this.responses.length
-      for (var i = 0; i < l; i++) {
+      const responsesLength = this.responses.length
+      for (let i = 0; i < responsesLength; i++) {
         this.responses[0].end()
         this.responses.shift()
       }
@@ -126,14 +126,14 @@ const ingestServer = http.createServer((request, response) => {
       }
     })
 
-    request.on('data', (chunk) => {
+    request.on('data', chunk => {
       if (!cacheMap.has(filename)) return
       cacheMap.get(filename).bufferList.append(chunk)
       cacheMap.get(filename).emit('data', chunk)
       writeStream.write(chunk)
     })
 
-    request.on('end', () => {
+    request.on('end', _ => {
       if (!cacheMap.has(filename)) return
       cacheMap.get(filename).emit('end')
       writeStream.end()
@@ -173,9 +173,6 @@ const deliveryServer = http.createServer((request, response) => {
 
 ingestServer.listen(ingestPort)
 deliveryServer.listen(deliveryPort)
-
-console.log(`Listening for ingest on port:   ${ingestPort}`)
-console.log(`Listening for delivery on port: ${deliveryPort}`)
 
 const getParams = _ => {
   const streamConfig = JSON.parse(fs.readFileSync('streams.json'))
@@ -272,7 +269,7 @@ const getParams = _ => {
   return params
 }
 
-const child = childProcess.spawn(pathToFfmpeg, getParams(), {
+const child = childProcess.spawn(pathToFFMPEG, getParams(), {
   stdio: 'pipe'
 })
 
