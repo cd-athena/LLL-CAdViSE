@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>HLS JS Player v1.2.0 - L2A</title>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:,">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<div>
+    <video controls style="width: 720px;" id="video"></video>
+</div>
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', () => {
+    let index
+    window.location.search.substr(1).split('&').forEach(keyValueString => {
+      const keyValueArray = keyValueString.split('=')
+      if (keyValueArray[0] === 'playerIndex') {
+        index = keyValueArray[1]
+      }
+    })
+
+    const videoSrc = 'http://localhost/live/master.m3u8?playerABR=hlsjs120-l2a-' + index
+    let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=hlsjs120-l2a-' + index
+
+    const video = document.getElementById('video')
+    const hls = new Hls({
+      'startLevel': -1,
+      'autoStartLoad': true,
+      'enableWorker': true,
+      'progressive': true,
+      'maxBufferLength': 1,
+      'liveBackBufferLength': 0,
+      'liveSyncDuration': 0,
+      'testBandwidth': true,
+      'liveMaxLatencyDuration': 5,
+      'liveDurationInfinity': true,
+      'highBufferWatchdogPeriod': 1,
+      'capLevelOnFPSDrop': true,
+      'maxLiveSyncPlaybackRate': 1.3,
+      'backBufferLength': 60 * 1.5,
+      'lowLatencyMode': true
+    })
+    hls.abrController.ABRRule = 'L2ARule'
+    hls.abrController.lastABRRule = 'L2ARule'
+    hls.abrController.liveCatchupPlaybackRate = 0.3
+    hls.abrController.liveCatchUpMinDrift = 0.05
+    hls.abrController.playbackBufferMin = 0.5
+    hls.abrController.targetLatency = 3
+    hls.abrController.liveCatchupLatencyThreshold = 60
+
+    hls.loadSource(videoSrc)
+    hls.attachMedia(video)
+
+    hls.on(Hls.Events.ERROR, console.error)
+
+    const events = ['loadstart', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'seeking', 'seeked', 'ended', 'durationchange', 'play', 'pause', 'ratechange']
+
+    events.forEach(event => {
+      video.addEventListener(event, e => {
+        axios.get(logURL.replace('%event%', e.type).replace('%content%', 'NA') + '&noCache=' + (new Date()).getTime()).catch(error => {
+          console.log(error)
+        })
+      })
+    })
+
+    video.play()
+
+    setInterval(() => {
+      // console.log(hls.bandwidthEstimate)
+      axios.get(logURL.replace('%event%', 'latency-rate').replace('%content%', hls.latency + '-' + hls.media.playbackRate) + '&noCache=' + (new Date()).getTime()).catch(error => {
+        console.log(error)
+      })
+    }, 1000)
+  })
+</script>
+</body>
+</html>
