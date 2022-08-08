@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>HLS JS Player v1.2.0 - Default</title>
+    <title>HLS JS Player v1.2.0 - Stallion</title>
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,8 +23,8 @@
       }
     })
 
-    const videoSrc = 'http://localhost/live/master.m3u8?playerABR=hlsjs120-default-' + index
-    let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=hlsjs120-default-' + index
+    const videoSrc = 'http://localhost/live/master.m3u8?playerABR=hlsjs120-stallion-' + index
+    let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=hlsjs120-stallion-' + index
 
     const video = document.getElementById('video')
     const hls = new Hls({
@@ -44,6 +44,9 @@
       'backBufferLength': 60 * 1.5,
       'lowLatencyMode': true
     })
+
+    hls.abrController.ABRRule = 'StallionRule'
+    hls.abrController.lastABRRule = 'StallionRule'
     hls.abrController.liveCatchupPlaybackRate = 0.3
     hls.abrController.liveCatchUpMinDrift = 0.05
     hls.abrController.playbackBufferMin = 0.5
@@ -58,7 +61,6 @@
     const events = ['loadstart', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'seeking', 'seeked', 'ended', 'durationchange', 'play', 'pause', 'ratechange']
 
     events.forEach(event => {
-      console.log(hls.bandwidthEstimate)
       video.addEventListener(event, e => {
         axios.get(logURL.replace('%event%', e.type).replace('%content%', 'NA') + '&noCache=' + (new Date()).getTime()).catch(error => {
           console.log(error)
