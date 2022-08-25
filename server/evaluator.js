@@ -314,7 +314,9 @@ let items = [];
           ',' + playbackRates.reduce(function (p, c, i, a) { return p + (c / a.length) }, 0).toFixed(2)
 
         if (QoECalc === '1') {
-          const ITUP1203Extractor = spawnSync('python3', ITUP1203Args)
+          const ITUP1203Extractor = spawnSync('python3', ITUP1203Args, {
+            maxBuffer: 1000 * 1000 * 5 // 5 MB
+          })
           const extractorOutput = ITUP1203Extractor.stdout.toString()
           fs.writeFileSync(outputPath + '/ITUP1203Input.json', extractorOutput)
 
