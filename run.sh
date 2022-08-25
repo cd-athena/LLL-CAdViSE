@@ -1,6 +1,6 @@
 #!/bin/bash
 
-players=("dashjs" "hlsjs" "dashjsl2a" "dashjslolp" "dashjsstallion")
+players=("dashjs" "hlsjs" "dashjsl2a" "dashjslolp" "dashjsstallion" "hlsjsl2a" "hlsjslolp" "hlsjsstallion")
 id=$(date '+%s')
 awsProfile="default"
 placementGroup="lll-cadvise-cluster"
