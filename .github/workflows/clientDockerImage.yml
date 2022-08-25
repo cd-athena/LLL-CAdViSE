@@ -3,7 +3,7 @@ name: Client Docker Image CI
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'client/**'
 
