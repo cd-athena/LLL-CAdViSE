@@ -180,10 +180,10 @@ const getParams = _ => {
   let params = [
     '-hide_banner',
     '-re', '-f', 'lavfi',
-    '-i', 'testsrc2=size=' + highestResolution + ':rate=25,' +
+    '-i', 'testsrc2=size=' + highestResolution + ':rate=24,' +
     'drawbox=x=0:y=0:w=700:h=50:c=black@.6:t=fill,' +
     'drawtext=x=5:y=5:fontfile=FreeSans.ttf:fontsize=54:fontcolor=white:text=\'CAdViSE\',' +
-    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0].replace(/:/g, '\\:') + '\\:00\':rate=25:tc24hmax=1,' +
+    'drawtext=x=345:y=5:fontfile=FreeSans.ttf:fontsize=50:fontcolor=white:timecode=\'' + new Date().toTimeString().split(' ')[0].replace(/:/g, '\\:') + '\\:00\':rate=24:tc24hmax=1,' +
     'setparams=field_mode=prog:range=tv:color_primaries=bt709:color_trc=bt709:colorspace=bt709,' +
     'format=yuv420p',
     '-re', '-f', 'lavfi',
@@ -214,7 +214,7 @@ const getParams = _ => {
   params = params.concat([
     '-map', '1:a',
     '-c:v', 'libx264',
-    '-preset:v', 'veryfast',
+    '-preset:v', 'faster',
     '-tune', 'zerolatency',
     '-profile:v', 'main'
   ])
@@ -229,18 +229,18 @@ const getParams = _ => {
   }
 
   params = params.concat([
-    '-g:v', '100000', '-keyint_min:v', '50000', '-force_key_frames:v', 'expr:gte(t,n_forced*2)',
-    '-x264opts', 'no-open-gop=1',
-    '-bf', '2', '-b_strategy', '2', '-refs', '1',
-    '-rc-lookahead', '24',
+    '-g:v', '48',
+    // '-keyint_min:v', '24', '-force_key_frames:v', 'expr:gte(t,n_forced*2)',
+    // '-x264opts', 'no-open-gop=1', '-bf', '2', '-b_strategy', '2', '-refs', '1', '-rc-lookahead', '24',
     '-export_side_data', 'prft',
-    '-field_order', 'progressive', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+    '-field_order', 'progressive',
+    // '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
     '-pix_fmt', 'yuv420p',
     '-c:a', 'aac',
     '-b:a', '128k',
     '-format_options', 'movflags=+cmaf',
     '-live', '1',
-    '-update_period', '4',
+    '-update_period', '30',
     '-use_timeline', '0',
     '-use_template', '1',
     '-init_seg_name', '$Bandwidth$-init.$ext$',
@@ -256,8 +256,8 @@ const getParams = _ => {
     '-lhls', '1',
     '-strict', 'experimental',
     '-target_latency', '3',
-    '-min_playback_rate', '0.96',
-    '-max_playback_rate', '1.04',
+    '-min_playback_rate', '0.95',
+    '-max_playback_rate', '1.05',
     '-method', 'PUT',
     '-http_persistent', '1',
     '-timeout', '2',
