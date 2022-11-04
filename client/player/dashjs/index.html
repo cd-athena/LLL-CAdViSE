@@ -11,7 +11,7 @@
 </head>
 <body>
 <div>
-    <video controls style="width: 720px;" id="video"></video>
+    <video controls width="1280" height="720" id="video"></video>
 </div>
 <script type="text/javascript">
   document.addEventListener('DOMContentLoaded', () => {
@@ -24,6 +24,7 @@
     })
 
     const mpdURL = 'http://localhost/live/manifest.mpd?playerABR=dashjs441-default-' + index
+    // const mpdURL = 'https://cmafref.akamaized.net/cmaf/live-ull/2006350/akambr/out.mpd'
     let logURL = 'http://localhost/log/live/%event%/%content%?playerABR=dashjs441-default-' + index
 
     const video = document.getElementById('video')
@@ -56,7 +57,7 @@
       axios.get(logURL.replace('%event%', 'latency-rate').replace('%content%', player.getCurrentLiveLatency() + '-' + player.getPlaybackRate()) + '&noCache=' + (new Date()).getTime()).catch(error => {
         console.log(error)
       })
-    }, 1000)
+    }, 2000)
   })
 </script>
 </body>
