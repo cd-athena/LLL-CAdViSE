@@ -11,7 +11,7 @@
 </head>
 <body>
 <div>
-    <video controls style="width: 720px;" id="video"></video>
+    <video controls width="1280" height="720" id="video"></video>
 </div>
 <script type="text/javascript">
   document.addEventListener('DOMContentLoaded', () => {
@@ -60,7 +60,7 @@
       axios.get(logURL.replace('%event%', 'latency-rate').replace('%content%', player.getCurrentLiveLatency() + '-' + player.getPlaybackRate()) + '&noCache=' + (new Date()).getTime()).catch(error => {
         console.log(error)
       })
-    }, 1000)
+    }, 2000)
   })
 </script>
 </body>

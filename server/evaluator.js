@@ -28,7 +28,7 @@ if (!QoECalc || QoECalc === '') {
 
 fs.appendFileSync(
   resultPath + experimentId + '.csv',
-  'experimentId,sequenceTitle,playerABR,playbackDuration,stallsDuration,startUpDelay,seekedDuration,qualitySwitches,minBitrate,maxBitrate,averageBitrate,minLatency,maxLatency,averageLatency,minPlaybackRate,maxPlaybackRate,averagePlaybackRate' + (QoECalc === '1' ? ',MOS\n' : '\n')
+  'experimentId,sequenceTitle,playerABR,playbackDuration,stallsDuration,startUpDelay,seekedDuration,qualitySwitches,minBitrate,maxBitrate,averageBitrate,minLatency,maxLatency,averageLatency,minPlaybackRate,maxPlaybackRate,averagePlaybackRate' + (QoECalc === '1' ? ',P.1203MOS\n' : '\n')
 )
 
 const queryParams = {
@@ -82,7 +82,7 @@ let items = [];
       let qualitySwitchNumber = 0
       let inputPath = 'dataset/'
       const displaySize = '1280x720'
-      const stallTolerance = 0.001
+      const stallTolerance = 0.004
       const audioBitrate = 128000
       const stallVideoPath = 'in/loading.mp4'
       const stallVideoDuration = 1.023 // second
