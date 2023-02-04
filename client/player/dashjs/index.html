@@ -42,14 +42,6 @@
       })
     })
 
-    player.updateSettings({
-      streaming: {
-        liveCatchup: {
-          maxDrift: 0 // no seeking
-        }
-      }
-    })
-
     player.initialize(video, mpdURL, false)
     player.play()
 
