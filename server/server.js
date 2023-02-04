@@ -230,11 +230,9 @@ const getParams = _ => {
 
   params = params.concat([
     '-g:v', '48',
-    // '-keyint_min:v', '24', '-force_key_frames:v', 'expr:gte(t,n_forced*2)',
-    // '-x264opts', 'no-open-gop=1', '-bf', '2', '-b_strategy', '2', '-refs', '1', '-rc-lookahead', '24',
+    '-x264opts', 'no-open-gop=1',
     '-export_side_data', 'prft',
     '-field_order', 'progressive',
-    // '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
     '-pix_fmt', 'yuv420p',
     '-c:a', 'aac',
     '-b:a', '128k',
@@ -255,7 +253,7 @@ const getParams = _ => {
     '-ldash', '1',
     '-lhls', '1',
     '-strict', 'experimental',
-    '-target_latency', '3',
+    '-target_latency', '5',
     '-min_playback_rate', '0.95',
     '-max_playback_rate', '1.05',
     '-method', 'PUT',
