@@ -4210,14 +4210,5 @@
     "clientIngress": 11010.24,
     "clientEgress": 0,
     "clientLatency": 0
-  },
-  {
-    "duration": 1,
-    "serverIngress": 0,
-    "serverEgress": 0,
-    "serverLatency": 80,
-    "clientIngress": null,
-    "clientEgress": 0,
-    "clientLatency": 0
   }
 ]
