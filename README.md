@@ -21,3 +21,23 @@ This testbed is based on [CAdViSE](https://github.com/cd-athena/CAdViSE).
 ```
 ./run.sh --players 5xdashjs 2xhlsjs 3xdashjsl2a --shaper network/network0.json --awsKey [YOUR-KEY] --withQoE
 ```
+
+#### Acknowledgement
+
+1. Please, include the link to this repository
+2. And cite the following publication:
+
+_B. Taraghi, H. Hellwagner and C. Timmerer, "LLL-CAdViSE: Live Low-Latency Cloud-Based Adaptive Video Streaming Evaluation Framework," in IEEE Access, vol. 11, pp. 25723-25734, 2023, doi: 10.1109/ACCESS.2023.3257099._
+```
+@ARTICLE{10068530,
+  author={Taraghi, Babak and Hellwagner, Hermann and Timmerer, Christian},
+  journal={IEEE Access}, 
+  title={LLL-CAdViSE: Live Low-Latency Cloud-Based Adaptive Video Streaming Evaluation Framework}, 
+  year={2023},
+  volume={11},
+  number={},
+  pages={25723-25734},
+  url={https://doi.org/10.1109/ACCESS.2023.3257099},
+  doi={10.1109/ACCESS.2023.3257099}
+}
+```
