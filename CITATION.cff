@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the article from preferred-citation and the software itself."
+preferred-citation:
+  authors:
+    - family-names: "Taraghi"
+      given-names: "Babak"
+      orcid: "https://orcid.org/0000-0003-2717-4660"
+    - family-names: "Hellwagner"
+      given-names: "Hermann"
+      orcid: "https://orcid.org/0000-0003-1114-2584"
+    - family-names: "Timmerer"
+      given-names: "Christian"
+      orcid: "https://orcid.org/0000-0002-0031-5243"
+  title: "LLL-CAdViSE: Live Low-Latency Cloud-Based Adaptive Video Streaming Evaluation Framework"
+  doi: 10.1109/ACCESS.2023.3257099
+  url : "https://doi.org/10.1109/ACCESS.2023.3257099"
+  type: journal-paper
+  pages: "25723--25734"
+  year: "2023"
+  journal: "IEEE Access, A Multidisciplinary, Open-access Journal of the IEEE"
+title: "LLL-CAdViSE: Live Low-Latency Cloud-Based Adaptive Video Streaming Evaluation Framework"
+version: 1.0.0
+date-released: 2023-03-14
+url: "https://github.com/cd-athena/LLL-CAdViSE"
